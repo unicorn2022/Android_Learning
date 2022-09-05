@@ -888,7 +888,7 @@
 
 2.   **GridLayoutManager**(中图）
 
-     1.   王格造型，每个item在滑动方向上的尺寸相同
+     1.   网格造型，每个item在滑动方向上的尺寸相同
      2.   可以通过setSpanSizeLookup和getSpanSize，指定条件（如item中text宽度，item的position等），来控制该item占几个位置（即每⼀行有几个item）
 
 3.   **StaggeredGridLayoutManager**(右图)
@@ -980,11 +980,11 @@ public class ItemData {
 
 ```java
 public class MyViewHolder extends RecyclerView.ViewHolder{
-    TextView networkResultItem;
+    public TextView textView;
 
     public MyViewHolder(View itemView){
         super(itemView);
-        this.networkResultItem = itemView.findViewById(R.id.Lab5_NetworkResult_Item);
+        this.textView = itemView.findViewById(R.id.recyclerview_item);
     }
 }
 ```
@@ -1075,7 +1075,7 @@ public class MyRecyclerViewAdapter
     public void onBindViewHolder(@NonNull MyViewHolder holder, int position) {
         // 根据item位置的数据, 设置当前item的每个组件的值
         ItemData data = itemList.get(position);
-        holder.networkResultItem.setText(data.getTitle());
+        holder.textView.setText(data.getTitle());
     }
 
     // item的数量
@@ -1166,6 +1166,11 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(MainActivity.this, WebViewActivity.class);
                 intent.putExtra("url", urlString);
                 startActivity(intent);
+                
+                 // 修改Adapter中的itemID处的文本
+                    adapter = (MyRecyclerViewAdapter) recyclerView.getAdapter();
+                    ItemData item = new ItemData("item " + itemID + " 已完成");
+                    adapter.setItem(itemID, item);
             }
         });
     }
