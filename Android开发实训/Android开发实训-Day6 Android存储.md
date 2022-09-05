@@ -130,8 +130,8 @@ android.os.Environment;
 
 ## 3.1	介绍
 
-1.   SharedPreference 就是 Android 提供的数据持久化的⼀个方式，适合单进程，小批量的数据存储和访问。基于 XML 进行实现，本质上还是⽂件的读写，API 相较 File 更简单。
-2.    以“键-值”对的方式保存数据的xml⽂件，其文件保存在**/data/data/[packageName]/shared_prefs**目录下
+1.   **SharedPreference** 就是 **Android** 提供的数据持久化的⼀个方式，适合单进程，小批量的数据存储和访问。基于 **XML** 进行实现，本质上还是⽂件的读写，**API** 相较 **File** 更简单。
+2.    以“键-值”对的方式保存数据的**xml**⽂件，其文件保存在**/data/data/[packageName]/shared_prefs**目录下
 
 ## 3.2	获取SharedPreferences
 
@@ -139,13 +139,38 @@ android.os.Environment;
 
 ## 3.3	读取SharedPreferences
 
+>   通过**getxxx()**方法获取，需要传入(**key**，**defaultValue**)
+
+```java
+private static final String SP_NAME = "Lab6_SharedPreference";
+private static final String SAVE_KEY  = "Lab6_Text";
+// 从内存中读取EditText的文本
+private String readTextFromStorage(){
+    SharedPreferences sp = Lab6_SharedPreference.this.getSharedPreferences(SP_NAME, Context.MODE_PRIVATE);
+    String text = sp.getString(SAVE_KEY,"记录一些文字");
+    return text;
+}
+```
+
 ![image-20220905094626044](AssetMarkdown/image-20220905094626044.png)
 
 ## 3.4	写SharedPreferences
 
 >   通过**Editor**类来提交修改
 
-![image-20220905094644264](AssetMarkdown/image-20220905094644264.png)
+```java
+private static final String SP_NAME = "Lab6_SharedPreference";
+private static final String SAVE_KEY  = "Lab6_Text";
+// 将当前EditText的文本保存到内存中
+private void saveTextToStorage(String text){
+    SharedPreferences sp = Lab6_SharedPreference.this.getSharedPreferences(SP_NAME, Context.MODE_PRIVATE);
+    SharedPreferences.Editor editor = sp.edit();
+    editor.putString(SAVE_KEY, text);
+    editor.commit();
+    // 或者调用apply方法
+    // editor.apply();
+}
+```
 
 ## 3.5	SharedPreferences的原理
 
@@ -197,7 +222,120 @@ android.os.Environment;
 >   4.   关闭资源 
 >        1.   有借有还，再借不难
 
-![image-20220905095626509](AssetMarkdown/image-20220905095626509.png)
+```java
+public class Lab6_FileIO extends AppCompatActivity {
+    private static final String TAG = "Lab6_FileIO";
+    private static final String SAVE_FILE_NAME = "Lab6_FileIO";
+    private static final String SAVE_KEY  = "Lab6_Text";
+    private EditText editText;
+    private Button saveButton;
+    private String fileName = null;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.lab6_text_memo);
+
+        fileName = getFilesDir().getAbsolutePath() + File.separator + SAVE_FILE_NAME;
+
+        editText = findViewById(R.id.Lab6_EditText);
+        readTextFromStorage();
+
+        saveButton = findViewById(R.id.Lab6_Save_Button);
+        saveButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                saveTextToStorage(editText.getText().toString());
+            }
+        });
+    }
+
+    // 从内存中读取EditText的文本
+    private void readTextFromStorage(){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                File file = new File(fileName);
+                // 文件不存在, 则新建一个文件
+                if(!file.exists()){
+                    try{
+                        boolean isSuccess = file.createNewFile();
+                        if(!isSuccess) throw new IOException("create file exception");
+                    }
+                    catch (IOException e) {
+                        Log.e(TAG, "readTextFromStorage: 创建文件失败");
+                        e.printStackTrace();
+                    }
+                }
+                // 文件存在
+                try {
+                    // 创建文件输入流
+                    FileInputStream inputStream = new FileInputStream(file);
+                    byte[] bytes = new byte[1024];
+                    final StringBuffer buffer = new StringBuffer();
+                    // 读取数据, 存入buffer中
+                    while (inputStream.read(bytes) != -1){
+                        buffer.append(new String(bytes));
+                    }
+                    // 在UI线程中修改editText的值
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            String text = buffer.toString();
+                            text = text.trim();
+                            if(text.equals("")) text = new String("记录一些文字");
+                            editText.setText(text);
+                        }
+                    });
+                }
+                catch (IOException e) {
+                    Log.e(TAG, "readTextFromStorage: 文件读取失败");
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    // 将当前EditText的文本保存到内存中
+    private void saveTextToStorage(String text){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                File file = new File(fileName);
+                // 文件不存在, 则新建一个文件
+                if(!file.exists()){
+                    try{
+                        boolean isSuccess = file.createNewFile();
+                        if(!isSuccess) throw new IOException("create file exception");
+                    } catch (IOException e) {
+                        Log.e(TAG, "saveTextToStorage: 创建文件失败");
+                        e.printStackTrace();
+                    }
+                }
+                // 文件存在
+                FileOutputStream outputStream = null;
+                try {
+                    outputStream = new FileOutputStream(file);
+                    outputStream.write(text.getBytes());
+                }
+                catch (IOException e){
+                    Log.e(TAG, "saveTextToStorage: 创建文件失败");
+                    e.printStackTrace();
+                }
+                finally { // 将文件输出流关闭
+                    try{
+                        if(outputStream != null)
+                            outputStream.close();
+                    }
+                    catch (IOException e){
+                        Log.e(TAG, "saveTextToStorage: 文件输出流关闭失败");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
+    }
+}
+```
 
 ## 4.7	？拓展：OkIO
 
